@@ -1,0 +1,6 @@
+{
+  "name": "QueueSense",
+  "description": "Don't Just Wait. Know Your Wait. AI-powered mobile-first queue monitoring, person tracking, and waiting-time prediction web application.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

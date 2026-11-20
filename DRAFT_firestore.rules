@@ -1,0 +1,199 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 1: Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Hardened Primitives
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Entity Blueprint Validators (Pillar 2)
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['userId', 'displayName', 'email', 'createdAt']) &&
+        data.keys().hasOnly(['userId', 'displayName', 'email', 'createdAt']) &&
+        isValidId(data.userId) &&
+        data.userId == request.auth.uid &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidQueueSession(data) {
+      return data.keys().hasAll([
+          'sessionId', 'userId', 'title', 'locationLabel', 'startTime', 'endTime',
+          'durationSeconds', 'maximumQueueLength', 'averageQueueLength',
+          'totalEntered', 'totalServed', 'averageWaitingTime', 'observedServiceRate',
+          'cameraConfiguration', 'modelVersion', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'sessionId', 'userId', 'title', 'locationLabel', 'startTime', 'endTime',
+          'durationSeconds', 'maximumQueueLength', 'averageQueueLength',
+          'totalEntered', 'totalServed', 'averageWaitingTime', 'observedServiceRate',
+          'cameraConfiguration', 'modelVersion', 'createdAt'
+        ]) &&
+        isValidId(data.sessionId) &&
+        isValidId(data.userId) &&
+        data.userId == request.auth.uid &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 140 &&
+        data.locationLabel is string && data.locationLabel.size() >= 1 && data.locationLabel.size() <= 100 &&
+        data.startTime is string && data.startTime.size() >= 1 && data.startTime.size() <= 64 &&
+        data.endTime is string && data.endTime.size() >= 1 && data.endTime.size() <= 64 &&
+        data.durationSeconds is number && data.durationSeconds >= 0 &&
+        data.maximumQueueLength is number && data.maximumQueueLength >= 0 &&
+        data.averageQueueLength is number && data.averageQueueLength >= 0 &&
+        data.totalEntered is number && data.totalEntered >= 0 &&
+        data.totalServed is number && data.totalServed >= 0 &&
+        data.averageWaitingTime is number && data.averageWaitingTime >= 0 &&
+        data.observedServiceRate is number && data.observedServiceRate >= 0 &&
+        data.cameraConfiguration is string && data.cameraConfiguration.size() >= 1 && data.cameraConfiguration.size() <= 120 &&
+        data.modelVersion is string && data.modelVersion.size() >= 1 && data.modelVersion.size() <= 120 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidQueueEvent(data) {
+      return data.keys().hasAll(['eventId', 'sessionId', 'userId', 'eventType', 'anonymousTrackId', 'createdAt']) &&
+        data.keys().hasOnly(['eventId', 'sessionId', 'userId', 'eventType', 'anonymousTrackId', 'createdAt']) &&
+        isValidId(data.eventId) &&
+        isValidId(data.sessionId) &&
+        isValidId(data.userId) &&
+        data.userId == request.auth.uid &&
+        data.eventType is string && data.eventType.size() >= 1 && data.eventType.size() <= 32 &&
+        (data.eventType == 'entry' || data.eventType == 'service_exit' || data.eventType == 'abandoned_exit') &&
+        data.anonymousTrackId is number && data.anonymousTrackId >= 0 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidPredictionRecord(data) {
+      return data.keys().hasAll([
+          'predictionId', 'sessionId', 'userId', 'queueCount', 'peopleAhead',
+          'observedServiceRate', 'estimatedWaitingTime', 'reliabilityLevel', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'predictionId', 'sessionId', 'userId', 'queueCount', 'peopleAhead',
+          'observedServiceRate', 'estimatedWaitingTime', 'reliabilityLevel', 'createdAt'
+        ]) &&
+        isValidId(data.predictionId) &&
+        isValidId(data.sessionId) &&
+        isValidId(data.userId) &&
+        data.userId == request.auth.uid &&
+        data.queueCount is number && data.queueCount >= 0 &&
+        data.peopleAhead is number && data.peopleAhead >= 0 &&
+        data.observedServiceRate is number && data.observedServiceRate >= 0 &&
+        data.estimatedWaitingTime is number && data.estimatedWaitingTime >= 0 &&
+        data.reliabilityLevel is string && data.reliabilityLevel.size() >= 1 && data.reliabilityLevel.size() <= 32 &&
+        (data.reliabilityLevel == 'insufficient_data' || data.reliabilityLevel == 'low' || data.reliabilityLevel == 'moderate' || data.reliabilityLevel == 'high') &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidUserPreferences(data) {
+      return data.keys().hasAll(['userId', 'preferredCameraFacing', 'confidenceThreshold', 'targetInferenceFps', 'updatedAt']) &&
+        data.keys().hasOnly(['userId', 'preferredCameraFacing', 'confidenceThreshold', 'targetInferenceFps', 'updatedAt']) &&
+        isValidId(data.userId) &&
+        data.userId == request.auth.uid &&
+        data.preferredCameraFacing is string && data.preferredCameraFacing.size() >= 4 && data.preferredCameraFacing.size() <= 16 &&
+        (data.preferredCameraFacing == 'environment' || data.preferredCameraFacing == 'user') &&
+        data.confidenceThreshold is number && data.confidenceThreshold >= 0.1 && data.confidenceThreshold <= 0.95 &&
+        data.targetInferenceFps is number && data.targetInferenceFps >= 1 && data.targetInferenceFps <= 60 &&
+        data.updatedAt is timestamp;
+    }
+
+    // 1. /users/{userId} (PII Isolated to Owner Only)
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid &&
+        isValidUserProfile(incoming()) &&
+        incoming().userId == userId &&
+        incoming().createdAt == request.time;
+      allow update: if isSignedIn() && isValidId(userId) && userId == request.auth.uid &&
+        isValidUserProfile(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().email == existing().email &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName']);
+      allow delete: if false;
+    }
+
+    // 2. /queue_sessions/{sessionId}
+    match /queue_sessions/{sessionId} {
+      allow get: if isSignedIn() && isValidId(sessionId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(sessionId) &&
+        isValidQueueSession(incoming()) &&
+        incoming().sessionId == sessionId &&
+        incoming().createdAt == request.time;
+      allow update: if isSignedIn() && isValidId(sessionId) &&
+        isValidQueueSession(incoming()) &&
+        existing().userId == request.auth.uid &&
+        incoming().sessionId == existing().sessionId &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'locationLabel']);
+      allow delete: if isSignedIn() && isValidId(sessionId) && existing().userId == request.auth.uid;
+    }
+
+    // 3. /queue_events/{eventId}
+    match /queue_events/{eventId} {
+      allow get: if isSignedIn() && isValidId(eventId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(eventId) &&
+        isValidQueueEvent(incoming()) &&
+        incoming().eventId == eventId &&
+        incoming().createdAt == request.time &&
+        exists(/databases/$(database)/documents/queue_sessions/$(incoming().sessionId)) &&
+        get(/databases/$(database)/documents/queue_sessions/$(incoming().sessionId)).data.userId == request.auth.uid;
+      allow update: if false;
+      allow delete: if isSignedIn() && isValidId(eventId) && existing().userId == request.auth.uid;
+    }
+
+    // 4. /prediction_history/{predictionId}
+    match /prediction_history/{predictionId} {
+      allow get: if isSignedIn() && isValidId(predictionId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(predictionId) &&
+        isValidPredictionRecord(incoming()) &&
+        incoming().predictionId == predictionId &&
+        incoming().createdAt == request.time &&
+        exists(/databases/$(database)/documents/queue_sessions/$(incoming().sessionId)) &&
+        get(/databases/$(database)/documents/queue_sessions/$(incoming().sessionId)).data.userId == request.auth.uid;
+      allow update: if false;
+      allow delete: if isSignedIn() && isValidId(predictionId) && existing().userId == request.auth.uid;
+    }
+
+    // 5. /user_preferences/{userId}
+    match /user_preferences/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid &&
+        isValidUserPreferences(incoming()) &&
+        incoming().userId == userId &&
+        incoming().updatedAt == request.time;
+      allow update: if isSignedIn() && isValidId(userId) && userId == request.auth.uid &&
+        isValidUserPreferences(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'preferredCameraFacing',
+          'confidenceThreshold',
+          'targetInferenceFps',
+          'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+  }
+}

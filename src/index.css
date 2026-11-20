@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --qs-bg-ivory: #F7F5EC;
+    --qs-brand-forest: #244C3A;
+    --qs-secondary-sage: #A8B9A0;
+    --qs-card-cream: #FFFDF6;
+    --qs-text-charcoal: #252B26;
+    --qs-text-grey: #777D75;
+    --qs-border-sage: #E1E6DA;
+    --qs-success-green: #477A55;
+    --qs-warning-amber: #D49A45;
+    --qs-error-terracotta: #C66B5B;
+
+    --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  html,
+  body {
+    background-color: #F7F5EC;
+    color: #252B26;
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  .font-mono-tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Safe area padding utilities for mobile viewports */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
